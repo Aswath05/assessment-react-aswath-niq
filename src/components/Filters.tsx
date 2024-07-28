@@ -1,8 +1,14 @@
-import { useState } from "react";
-import { ICategory, IProduct, TSelectedValue } from "../types/CategoryTypes";
+import { useReducer } from "react";
+import {
+  ICategory,
+  IFilterState,
+  IProduct,
+  TSelectedValue,
+} from "../types/CategoryTypes";
 import CustomSelect from "./CustomSelect";
 import { Product } from "../models/Product";
 import Loader from "./Loader";
+import FilterReducer from "../context/reducer/FilterReducer";
 
 interface FiltersProps {
   productCategories: ICategory[];
@@ -23,56 +29,65 @@ const findSelectedProducts = (selected: unknown[], products: IProduct[]) => {
   return res;
 };
 
-const Filters = ({ productCategories, runReportHandler }: FiltersProps) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedProduct, setSelectedProduct] = useState<string[]>([]);
-  const [products, setProducts] = useState([]);
-  const [enableRunReport, setEnableRunReport] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
+export const initialState: IFilterState = {
+  selectedCategory: "",
+  selectedProduct: [],
+  products: [],
+  enableRunReport: false,
+  isLoading: false,
+};
+
+const Filters = ({ productCategories, runReportHandler }: FiltersProps) => {
+  const [state, dispatch] = useReducer(FilterReducer, initialState);
   /**
-   * 
+   *
    * @param categoryName
    * fetches api for individual products based on category selected
    */
   const getProductByCategory = async (categoryName: string) => {
     await fetch(`https://dummyjson.com/products/category/${categoryName}`)
       .then((res) => res.json())
-      .then((data) =>
-        setProducts(data?.products?.map((dt: IProduct) => new Product(dt)))
-      );
+      .then((data) => {
+        const products = data?.products?.map((dt: IProduct) => new Product(dt));
+        dispatch({ type: "SET_PRODUCTS", payload: products });
+      });
   };
 
   const handleSelectChange = (data: TSelectedValue) => {
     if (data?.isMultiple) {
-      setSelectedProduct(data?.value as string[]);
+      dispatch({
+        type: "SET_SELECTED_PRODUCT",
+        payload: data?.value as string[],
+      });
     } else {
-      setSelectedCategory(data?.value as string);
-      setSelectedProduct([]);
+      dispatch({
+        type: "SET_SELECTED_CATEGORY",
+        payload: data?.value as string,
+      });
+      dispatch({ type: "RESET_SELECTED_PRODUCT" });
       getProductByCategory(data?.value as string);
     }
-    setEnableRunReport(true);
+    dispatch({ type: "SET_ENABLE_RUN_REPORT", payload: true });
   };
 
   const runReport = () => {
-    setIsLoading(true);
+    dispatch({ type: "SET_IS_LOADING", payload: true });
     setTimeout(() => {
-      setIsLoading(false);
+      dispatch({ type: "SET_IS_LOADING", payload: false });
       runReportHandler({
         runReport: true,
-        products: selectedProduct.length
-          ? findSelectedProducts(selectedProduct, products)
-          : products,
+        products: state.selectedProduct.length
+          ? findSelectedProducts(state.selectedProduct, state.products)
+          : state.products,
       });
-      setEnableRunReport(false);
+      dispatch({ type: "SET_ENABLE_RUN_REPORT", payload: false });
     }, 2000);
   };
 
   const reset = () => {
-    setSelectedCategory("");
-    setSelectedProduct([]);
-    setProducts([]);
-    setEnableRunReport(false);
+  
+    dispatch({ type: "RESET_STATE" });
     runReportHandler({
       runReport: false,
       products: [],
@@ -81,7 +96,7 @@ const Filters = ({ productCategories, runReportHandler }: FiltersProps) => {
 
   return (
     <>
-      {isLoading && <Loader />}
+      {state.isLoading && <Loader />}
       <div className="flex flex-col justify-between border border-black rounded-md px-3 py-4 w-[300px]">
         <div className="flex flex-col w-full gap-10">
           <div className="flex items-center justify-between">
@@ -96,21 +111,21 @@ const Filters = ({ productCategories, runReportHandler }: FiltersProps) => {
               multiple={false}
               placeholder="Select Category"
               onChange={handleSelectChange}
-              selectedValue={selectedCategory}
+              selectedValue={state.selectedCategory}
             />
             <CustomSelect
-              options={products}
+              options={state.products}
               multiple
               placeholder="Select product"
               onChange={handleSelectChange}
-              disabled={!products.length}
-              selectedValue={selectedProduct}
+              disabled={!state.products.length}
+              selectedValue={state.selectedProduct}
             />
           </div>
         </div>
         <button
           className="p-3 border rounded-md bg-blue-600 text-white font-medium disabled:bg-blue-400 disabled:cursor-not-allowed"
-          disabled={!enableRunReport}
+          disabled={!state.enableRunReport}
           onClick={runReport}
         >
           Run Report

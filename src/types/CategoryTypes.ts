@@ -19,6 +19,30 @@ type TSelectedValue = {
   value: string | string[];
 };
 
-type TSelectOptions = { id: string | number; name: string }
+type TSelectOptions = { id: string | number; name: string };
 
-export type { ICategory, IProduct, TSelectedValue, TSelectOptions };
+interface IFilterState {
+  selectedCategory: string;
+  selectedProduct: string[];
+  products: any[]; // Update the type according to your product type
+  enableRunReport: boolean;
+  isLoading: boolean;
+}
+
+type TFilterAction =
+  | { type: "SET_SELECTED_CATEGORY"; payload: string }
+  | { type: "SET_SELECTED_PRODUCT"; payload: string[] }
+  | { type: "SET_PRODUCTS"; payload: any[] } // Update the type according to your product type
+  | { type: "SET_ENABLE_RUN_REPORT"; payload: boolean }
+  | { type: "SET_IS_LOADING"; payload: boolean }
+  | { type: "RESET_STATE" }
+  | { type: "RESET_SELECTED_PRODUCT" };
+
+export type {
+  ICategory,
+  IProduct,
+  TSelectedValue,
+  TSelectOptions,
+  IFilterState,
+  TFilterAction,
+};
